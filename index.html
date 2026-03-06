@@ -1,0 +1,1635 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>旧金山 + 夏威夷 9日行程</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    /* ===== Reset & Base ===== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+      background: #f5f5f0;
+      color: #333;
+      line-height: 1.6;
+    }
+
+    /* ===== Hero Header ===== */
+    #trip-header {
+      position: relative;
+      background: url('images/d3-golden-gate.jpg') center/cover no-repeat;
+      color: #fff;
+      text-align: center;
+      padding: 48px 16px 16px;
+      overflow: hidden;
+    }
+
+    #trip-header::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(10,10,25,0.7), rgba(16,30,55,0.65));
+      z-index: 0;
+    }
+
+    #trip-header > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    #trip-header h1 {
+      font-size: 1.8rem;
+      font-weight: 800;
+      margin-bottom: 4px;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    }
+
+    #trip-header .date-range {
+      font-size: 0.95rem;
+      opacity: 0.9;
+      margin-bottom: 8px;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    }
+
+    #trip-header .badges {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    #trip-header .badge {
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(4px);
+      color: #fff;
+      padding: 4px 14px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      white-space: nowrap;
+    }
+
+    /* ===== Trip Progress Bar ===== */
+    .trip-progress {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      margin-top: 4px;
+    }
+    .trip-progress .prog-day {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+      padding: 4px 0;
+      min-width: 38px;
+      transition: transform 0.15s;
+    }
+    .trip-progress .prog-day:hover { transform: scale(1.12); }
+    .trip-progress .prog-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.3);
+      border: 2px solid rgba(255,255,255,0.5);
+      transition: all 0.2s;
+    }
+    .trip-progress .prog-day.active .prog-dot {
+      background: #fff;
+      border-color: #fff;
+      box-shadow: 0 0 8px rgba(255,255,255,0.6);
+    }
+    .trip-progress .prog-day.past .prog-dot {
+      background: rgba(255,255,255,0.7);
+      border-color: rgba(255,255,255,0.7);
+    }
+    .trip-progress .prog-label {
+      font-size: 0.65rem;
+      margin-top: 3px;
+      opacity: 0.7;
+    }
+    .trip-progress .prog-day.active .prog-label {
+      opacity: 1;
+      font-weight: 700;
+    }
+    .trip-progress .prog-line {
+      width: 20px;
+      height: 2px;
+      background: rgba(255,255,255,0.3);
+      flex-shrink: 0;
+    }
+    .trip-progress .prog-line.past {
+      background: rgba(255,255,255,0.7);
+    }
+
+    /* ===== App Layout ===== */
+    #app {
+      display: flex;
+      height: calc(100vh - 190px);
+    }
+
+    #map-panel {
+      width: 40%;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+
+    .overview-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 1000;
+      background: #fff;
+      border: 2px solid rgba(0, 0, 0, 0.2);
+      border-radius: 6px;
+      padding: 6px 14px;
+      font-size: 0.85rem;
+      font-family: inherit;
+      cursor: pointer;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+      transition: background 0.2s;
+    }
+
+    .overview-btn:hover {
+      background: #f0f0f0;
+    }
+
+    #itinerary-panel {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 24px;
+    }
+
+    /* ===== Mobile Layout ===== */
+    @media (max-width: 768px) {
+      #app {
+        flex-direction: column;
+        height: auto;
+      }
+
+      #map-panel {
+        width: 100%;
+        height: 45vh;
+      }
+
+      #itinerary-panel {
+        padding: 16px;
+      }
+    }
+
+    /* ===== Summary Tables ===== */
+    .summary-section {
+      margin-bottom: 24px;
+    }
+
+    .summary-section h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #1a1a2e;
+      border-bottom: 2px solid #e0e0e0;
+      padding-bottom: 6px;
+      margin-bottom: 12px;
+    }
+
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      margin-bottom: 4px;
+    }
+
+    .summary-table thead th {
+      background: #f0f0ec;
+      text-align: left;
+      padding: 8px 10px;
+      font-weight: 600;
+      color: #555;
+      border-bottom: 2px solid #ddd;
+    }
+
+    .summary-table tbody td {
+      padding: 7px 10px;
+      border-bottom: 1px solid #eee;
+      vertical-align: top;
+    }
+
+    .summary-table tbody tr:hover {
+      background: #fafaf6;
+    }
+
+    /* ===== Checklist ===== */
+    .checklist {
+      list-style: none;
+      padding: 0;
+    }
+
+    .checklist li {
+      padding: 4px 0;
+      font-size: 0.88rem;
+      line-height: 1.5;
+      border-bottom: 1px solid #f0f0ec;
+      transition: opacity 0.3s;
+    }
+    .checklist li label {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      cursor: pointer;
+      padding: 4px 0;
+    }
+    .checklist li label input[type="checkbox"] {
+      margin-top: 4px;
+      flex-shrink: 0;
+      width: 16px;
+      height: 16px;
+      accent-color: #4caf50;
+      cursor: pointer;
+    }
+    .checklist li.done span {
+      text-decoration: line-through;
+      opacity: 0.5;
+    }
+
+    /* ===== Day Cards ===== */
+    #day-cards {
+      margin-top: 8px;
+    }
+
+    .day-card {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+      margin-bottom: 12px;
+      overflow: hidden;
+      transition: box-shadow 0.2s;
+    }
+
+    .day-card:hover {
+      box-shadow: 0 3px 14px rgba(0, 0, 0, 0.12);
+    }
+
+    .day-card-header {
+      display: flex;
+      align-items: center;
+      padding: 14px 16px;
+      cursor: pointer;
+      user-select: none;
+      gap: 12px;
+    }
+
+    .day-num {
+      font-size: 1.3rem;
+      font-weight: 800;
+      min-width: 40px;
+    }
+
+    .day-info {
+      flex: 1;
+    }
+
+    .day-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #222;
+    }
+
+    .day-date {
+      font-size: 0.8rem;
+      color: #888;
+      margin-top: 2px;
+    }
+
+    .expand-icon {
+      font-size: 0.75rem;
+      color: #999;
+      transition: transform 0.3s ease;
+    }
+
+    .day-card.open .expand-icon {
+      transform: rotate(180deg);
+    }
+
+    /* ===== Day Card Badges ===== */
+    .day-card-badges {
+      padding: 0 16px 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .day-card-badges:empty {
+      display: none;
+    }
+
+    .tag-flight {
+      background: #e3f2fd;
+      color: #1565c0;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .tag-hotel {
+      background: #fff3e0;
+      color: #e65100;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .tag-car {
+      background: #e8f5e9;
+      color: #2e7d32;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    /* ===== Day Card Body (collapsible) ===== */
+    .day-card-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease;
+    }
+
+    .day-card.open .day-card-body {
+      max-height: 2000px;
+    }
+
+    /* ===== Timeline ===== */
+    .timeline {
+      padding: 4px 16px 16px 36px;
+      position: relative;
+    }
+
+    .timeline::before {
+      content: "";
+      position: absolute;
+      left: 24px;
+      top: 8px;
+      bottom: 16px;
+      width: 2px;
+      background: #e0e0e0;
+    }
+
+    .timeline-item {
+      position: relative;
+      padding: 6px 0 6px 20px;
+      font-size: 0.85rem;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    .timeline-item::before {
+      content: "";
+      position: absolute;
+      left: -19px;
+      top: 12px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ccc;
+      border: 2px solid #fff;
+      box-shadow: 0 0 0 1px #ccc;
+    }
+
+    .timeline-item.has-location::before {
+      background: var(--dot-color, #4a90d9);
+      box-shadow: 0 0 0 1px var(--dot-color, #4a90d9);
+    }
+
+    .timeline-item.has-location {
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background 0.15s;
+    }
+
+    .timeline-item.has-location:hover {
+      background: #f0f7ff;
+    }
+
+    .tl-time {
+      color: #666;
+      font-weight: 600;
+      min-width: 90px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .tl-name {
+      color: #333;
+    }
+
+    /* ===== Scrollbar ===== */
+    #itinerary-panel::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    #itinerary-panel::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    #itinerary-panel::-webkit-scrollbar-thumb {
+      background: #ccc;
+      border-radius: 3px;
+    }
+
+    /* ===== Map Markers ===== */
+    .city-marker { background: transparent; border: none; }
+    .route-num-marker { background: transparent; border: none; }
+
+    .activity-num-marker { background: transparent; border: none; }
+    .activity-num-icon {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+      border: 2.5px solid currentColor;
+    }
+    .tl-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      font-size: 10px;
+      font-weight: 700;
+      color: #fff;
+      margin-right: 6px;
+      flex-shrink: 0;
+    }
+
+    .tl-subs {
+      margin: 4px 0 2px 24px;
+      padding: 0;
+      list-style: none;
+      font-size: 11px;
+      color: #888;
+    }
+    .tl-subs li {
+      padding: 2px 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .tl-subs li::before {
+      content: '•';
+      color: #bbb;
+    }
+    .tl-sub-dur {
+      font-size: 10px;
+      color: #aaa;
+      margin-left: auto;
+      white-space: nowrap;
+    }
+    [data-theme="dark"] .tl-subs { color: #aaa; }
+    [data-theme="dark"] .tl-subs li::before { color: #666; }
+    [data-theme="dark"] .tl-sub-dur { color: #777; }
+
+    .day-card.active { box-shadow: 0 0 0 2px #1976d2, 0 2px 8px rgba(25,118,210,0.2); }
+
+    @media print {
+      #map-panel { display: none; }
+      #itinerary-panel { width: 100%; overflow: visible; }
+      .day-card { break-inside: avoid; }
+      .day-card-body { max-height: none !important; overflow: visible !important; }
+      .day-card.open .day-card-body { max-height: none; }
+      .overview-btn { display: none; }
+    }
+
+    /* ===== Countdown ===== */
+    #countdown {
+      font-size: 1.1rem;
+      margin-bottom: 10px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+    }
+    #countdown .countdown-num {
+      font-size: 1.4rem;
+      font-weight: 800;
+    }
+
+    /* ===== Weather ===== */
+    .day-weather {
+      font-size: 0.78rem;
+      color: #666;
+      margin-top: 2px;
+    }
+    [data-theme="dark"] .day-weather { color: #aaa; }
+
+    /* ===== Emergency ===== */
+    .emergency-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 10px;
+    }
+    .emergency-card {
+      background: #fef7f0;
+      border: 1px solid #f0dcc8;
+      border-radius: 8px;
+      padding: 12px;
+    }
+    .em-title {
+      font-weight: 600;
+      font-size: 0.85rem;
+      margin-bottom: 6px;
+      color: #c44;
+    }
+    .em-detail {
+      font-size: 0.8rem;
+      color: #555;
+      margin: 2px 0;
+    }
+    [data-theme="dark"] .emergency-card {
+      background: #2a2020;
+      border-color: #443030;
+    }
+    [data-theme="dark"] .em-title { color: #e88; }
+    [data-theme="dark"] .em-detail { color: #bbb; }
+
+    /* ===== Day Card Cover Photos ===== */
+    .day-card-cover {
+      height: 100px;
+      background-size: cover;
+      background-position: center;
+      position: relative;
+    }
+    .day-card-cover::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 40px;
+      background: linear-gradient(transparent, rgba(255,255,255,0.9));
+    }
+    [data-theme="dark"] .day-card-cover::after {
+      background: linear-gradient(transparent, rgba(30,30,30,0.9));
+    }
+
+    /* ===== Theme Toggle ===== */
+    .theme-toggle {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 9999;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: none;
+      background: #1a1a2e;
+      color: white;
+      font-size: 1.2rem;
+      cursor: pointer;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+      transition: background 0.3s, transform 0.2s;
+    }
+    .theme-toggle:hover { transform: scale(1.1); }
+    [data-theme="dark"] .theme-toggle {
+      background: #f0f0ea;
+      color: #333;
+    }
+
+    /* ===== Dark Mode ===== */
+    [data-theme="dark"] body { background: #1a1a1a; color: #e0e0e0; }
+    [data-theme="dark"] #trip-header::before { background: linear-gradient(135deg, rgba(5,5,12,0.85), rgba(8,15,30,0.8)); }
+    [data-theme="dark"] .day-card { background: #252525; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+    [data-theme="dark"] .day-card:hover { box-shadow: 0 3px 14px rgba(0,0,0,0.4); }
+    [data-theme="dark"] .day-title { color: #eee; }
+    [data-theme="dark"] .day-date { color: #999; }
+    [data-theme="dark"] .tl-time { color: #aaa; }
+    [data-theme="dark"] .tl-name { color: #ddd; }
+    [data-theme="dark"] .timeline::before { background: #444; }
+    [data-theme="dark"] .timeline-item::before { background: #555; border-color: #252525; box-shadow: 0 0 0 1px #555; }
+    [data-theme="dark"] .timeline-item.has-location:hover { background: rgba(255,255,255,0.05); }
+    [data-theme="dark"] .summary-section h2 { color: #ccc; border-bottom-color: #444; }
+    [data-theme="dark"] .summary-table thead th { background: #2a2a2a; color: #aaa; border-bottom-color: #444; }
+    [data-theme="dark"] .summary-table tbody td { border-bottom-color: #333; }
+    [data-theme="dark"] .summary-table tbody tr:hover { background: #2a2a2a; }
+    [data-theme="dark"] .checklist li { border-bottom-color: #333; }
+    [data-theme="dark"] .overview-btn { background: #333; color: #eee; border-color: #555; }
+    [data-theme="dark"] #itinerary-panel::-webkit-scrollbar-thumb { background: #555; }
+    [data-theme="dark"] .tag-flight { background: #1a2a3a; color: #6db3f2; }
+    [data-theme="dark"] .tag-hotel { background: #3a2a1a; color: #f0a060; }
+    [data-theme="dark"] .tag-car { background: #1a3a1a; color: #6fd06f; }
+    /* ===== Password Gate ===== */
+    #pw-gate {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+    #pw-gate.hidden { display: none; }
+    .pw-box {
+      background: rgba(255,255,255,0.08);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 16px;
+      padding: 40px;
+      text-align: center;
+      max-width: 360px;
+      width: 90%;
+    }
+    .pw-box h2 {
+      color: #fff;
+      font-size: 1.4rem;
+      margin: 0 0 8px;
+    }
+    .pw-box p {
+      color: rgba(255,255,255,0.5);
+      font-size: 0.85rem;
+      margin: 0 0 24px;
+    }
+    .pw-input-wrap {
+      display: flex;
+      gap: 8px;
+    }
+    .pw-input-wrap input {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 8px;
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .pw-input-wrap input:focus {
+      border-color: rgba(255,255,255,0.5);
+    }
+    .pw-input-wrap input::placeholder { color: rgba(255,255,255,0.3); }
+    .pw-input-wrap button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      background: #e8913a;
+      color: #fff;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .pw-input-wrap button:hover { background: #d07a2a; }
+    .pw-error {
+      color: #ff6b6b;
+      font-size: 0.8rem;
+      margin-top: 12px;
+      min-height: 1.2em;
+    }
+  </style>
+</head>
+<body>
+  <div id="pw-gate">
+    <div class="pw-box">
+      <h2>Trip Planner</h2>
+      <p>请输入密码查看行程</p>
+      <div class="pw-input-wrap">
+        <input type="password" id="pw-input" placeholder="密码" autocomplete="off">
+        <button onclick="checkPw()">进入</button>
+      </div>
+      <div class="pw-error" id="pw-error"></div>
+    </div>
+  </div>
+
+  <header id="trip-header">
+    <h1>旧金山 + 夏威夷 9日行程</h1>
+    <div class="date-range">2026年5月1日 – 5月10日</div>
+    <div class="countdown" id="countdown"></div>
+    <div class="badges">
+      <span class="badge">✈️ 6 趟航班</span>
+      <span class="badge">🏨 4 间酒店</span>
+      <span class="badge">🚗 3 次租车</span>
+    </div>
+    <div class="trip-progress" id="trip-progress"></div>
+  </header>
+
+  <main id="app">
+    <div id="map-panel">
+      <button class="overview-btn" onclick="showOverview()">🌏 全览</button>
+      <div id="map"></div>
+    </div>
+    <div id="itinerary-panel"></div>
+  </main>
+
+  <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()">🌙</button>
+
+  <script>
+    // ===== PASSWORD GATE =====
+    const PW_HASH = 'bee53cbc48e3ce255f28dbf971dcb4983bbe1982649dd2f7135f5bb8c10bbd2a'; // sha256
+    async function sha256(str) {
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+    async function checkPw() {
+      const input = document.getElementById('pw-input').value;
+      const hash = await sha256(input);
+      if (hash === PW_HASH) {
+        sessionStorage.setItem('pw-ok', '1');
+        document.getElementById('pw-gate').classList.add('hidden');
+      } else {
+        document.getElementById('pw-error').textContent = '密码错误，请重试';
+        document.getElementById('pw-input').value = '';
+        document.getElementById('pw-input').focus();
+      }
+    }
+    // Auto-unlock if already authenticated this session
+    if (sessionStorage.getItem('pw-ok') === '1') {
+      document.getElementById('pw-gate').classList.add('hidden');
+    }
+    // Enter key support
+    document.getElementById('pw-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') checkPw();
+    });
+  </script>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // ===== TRIP DATA =====
+    const TRIP_DATA = {
+      title: "旧金山 + 夏威夷 9日行程",
+      dateRange: "5/01 – 5/10",
+      flights: [
+        { date: "5/01", code: "UA862", from: "HKG", fromName: "香港", to: "SFO", toName: "旧金山", depart: "11:45", arrive: "09:20" },
+        { date: "5/04", code: "UA1175", from: "SFO", fromName: "旧金山", to: "HNL", toName: "檀香山", depart: "09:20", arrive: "11:58" },
+        { date: "5/06", code: "待改签", from: "HNL", fromName: "檀香山", to: "ITO", toName: "希洛", depart: "下午", arrive: "待定", note: "需改签早班" },
+        { date: "5/07", code: "AS1111", from: "ITO", fromName: "希洛", to: "HNL", toName: "檀香山", depart: "19:44", arrive: "20:39" },
+        { date: "5/09", code: "KE054", from: "HNL", fromName: "檀香山", to: "ICN", toName: "首尔", depart: "12:35", arrive: "5/10 17:45" },
+        { date: "5/10", code: "KE2011", from: "ICN", fromName: "首尔", to: "HKG", toName: "香港", depart: "19:45", arrive: "22:45" }
+      ],
+      hotels: [
+        { dates: "5/01–5/03", nights: 2, name: "Holiday Inn Express & Suites Fisherman's Wharf", location: "550 North Point St, San Francisco", city: "sfo" },
+        { dates: "5/03–5/04", nights: 1, name: "Bay Landing Hotel", location: "Burlingame", note: "含5/04早餐", city: "sfo" },
+        { dates: "5/04–5/06 + 5/07–5/09", nights: 4, name: "Waikiki市中心酒店", location: "Waikiki, Honolulu", note: "连住，大岛行李放车上", city: "hnl" },
+        { dates: "5/06–5/07", nights: 1, name: "Hilo市区酒店", location: "Hilo, Big Island", city: "hilo" }
+      ],
+      carRentals: [
+        { date: "5/03", location: "旧金山", detail: "市区取车 → SFO/机场附近还车", duration: "1天" },
+        { date: "5/06–5/07", location: "大岛 Hilo", detail: "下午机场取车 → Mauna Kea → 次日火山公园 → 傍晚机场还车", duration: "2天" },
+        { date: "5/08", location: "欧胡岛", detail: "Waikiki取车 → 恐龙湾（早上）→ Kualoa Hollywood Tour → 平等院/张学良墓 → Waikiki还车", duration: "1天" }
+      ],
+      bookingChecklist: [
+        "🔴 珍珠港 USS Arizona — 3/10 下午3点(夏威夷) 开抢，几分钟售罄！提前登录 recreation.gov",
+        "🔴 恶魔岛船票 — 尽快订，周六场次抢手",
+        "🟡 Diamond Head 预约（9am 场）— 4/6 开放，30天前放票",
+        "🟡 Kualoa Ranch Hollywood Movie Sites Tour — 尽早订，4-6周前常售罄",
+        "🟡 Hanauma Bay 恐龙湾预约（早上 6:45 场）— gostateparks.hawaii.gov",
+        "🟡 珍珠港 Passport to Pearl Harbor 套票（$89/人，含 Missouri+Bowfin+航空博物馆）",
+        "🟢 5/06 HNL→ITO 下午航班改签（原 19:35 改早班）",
+        "🟢 5/06 Hilo 酒店（1晚）+ Hilo 租车（确认能开 Mauna Kea Saddle Road）",
+        "🟢 5/03 旧金山租车（市区取→机场附近还）",
+        "🟢 Waikiki 市中心酒店（5/04–5/09 连住）"
+      ],
+      days: [
+        {
+          id: "d1", day: 1, date: "5/01", weekday: "周五",
+          title: "抵达旧金山｜悠闲开局：唐人街 + 孙中山相关",
+          region: "sfo", color: "#E8913A",
+          weather: { icon: "⛅", high: 18, low: 11, desc: "多云转晴" },
+          coverImg: "images/d1-chinatown.jpg",
+          flight: { code: "UA862", from: "HKG", to: "SFO", time: "11:45→09:20" },
+          hotel: "Holiday Inn Express & Suites Fisherman's Wharf",
+          activities: [
+            { time: "09:20", end: "10:40", name: "抵达 SFO / 入境取行李", lat: 37.6213, lng: -122.3790, icon: "airport" },
+            { time: "10:40", end: "11:30", name: "前往酒店（先寄存行李）", lat: 37.8060, lng: -122.4154 },
+            { time: "11:30", end: "13:00", name: "午餐 + 缓冲", lat: 37.8060, lng: -122.4154 },
+            { time: "14:00", end: "14:20", name: "Dragon Gate 拍照 + 主街感受", lat: 37.7908, lng: -122.4058, icon: "sight" },
+            { time: "14:20", end: "15:10", name: "唐人街随逛（Grant Ave）", lat: 37.7941, lng: -122.4078, icon: "sight" },
+            { time: "15:10", end: "15:40", name: "【可选】孙中山相关纪念点", lat: 37.7935, lng: -122.4060, icon: "sight" },
+            { time: "16:30", name: "回酒店办理入住/休息", lat: 37.8060, lng: -122.4154 },
+            { time: "18:00", end: "19:30", name: "渔人码头海边散步 + 晚餐", lat: 37.8080, lng: -122.4177, icon: "food" },
+            { time: "21:00", name: "休息" }
+          ]
+        },
+        {
+          id: "d2", day: 2, date: "5/02", weekday: "周六",
+          title: "恶魔岛 + Coit Tower + Ferry Building",
+          region: "sfo", color: "#E8913A",
+          weather: { icon: "⛅", high: 18, low: 11, desc: "多云转晴" },
+          coverImg: "images/d2-alcatraz.jpg",
+          hotel: "Holiday Inn Express & Suites Fisherman's Wharf",
+          activities: [
+            { time: "07:30", name: "早餐" },
+            { time: "08:30", name: "出发去 Pier 33", lat: 37.8083, lng: -122.4098 },
+            { time: "09:00", end: "12:30", name: "恶魔岛 Day Tour", lat: 37.8267, lng: -122.4230, icon: "sight",
+              subs: [
+                { name: "提前 30 分钟到 Pier 33 安检", duration: "必须" },
+                { name: "音频导览（含中文，强烈推荐）", duration: "45min" },
+                { name: "穿好走的鞋，上山坡 130ft", duration: "提醒" }
+              ]
+            },
+            { time: "13:00", name: "午餐", icon: "food" },
+            { time: "14:30", end: "15:30", name: "Coit Tower（城市景）", lat: 37.8024, lng: -122.4058, icon: "sight" },
+            { time: "16:00", end: "17:00", name: "Ferry Building（咖啡/休息）", lat: 37.7955, lng: -122.3937, icon: "sight",
+              subs: [
+                { name: "周六有农夫市集（Farmer's Market）", duration: "bonus" }
+              ]
+            },
+            { time: "18:00", name: "回酒店" },
+            { time: "19:30", name: "晚餐", icon: "food" }
+          ]
+        },
+        {
+          id: "d3", day: 3, date: "5/03", weekday: "周日",
+          title: "金门大桥拍照 + 硅谷（山景城）",
+          region: "sfo", color: "#E8913A",
+          weather: { icon: "⛅", high: 18, low: 11, desc: "多云转晴" },
+          coverImg: "images/d3-golden-gate.jpg",
+          hotel: "Bay Landing Hotel（Burlingame）",
+          carRental: "旧金山租车（市区取→机场附近还）",
+          activities: [
+            { time: "07:30", name: "退房准备" },
+            { time: "08:30", name: "市区取车", lat: 37.8060, lng: -122.4154 },
+            { time: "09:15", end: "10:30", name: "金门大桥拍照", lat: 37.8199, lng: -122.4783, icon: "sight",
+              subs: [
+                { name: "Battery Spencer（北侧山上）最佳拍照点", duration: "推荐" },
+                { name: "车内不要放任何东西，防砸窗", duration: "⚠️" }
+              ]
+            },
+            { time: "10:30", end: "12:00", name: "开车去南湾" },
+            { time: "12:00", end: "16:30", name: "硅谷打卡（Google/Apple/Stanford）", lat: 37.4220, lng: -122.0841, icon: "sight",
+              subs: [
+                { name: "Apple Park Visitor Center（纪念品店+天台）", duration: "1h" },
+                { name: "Googleplex（Android 雕塑花园+外观）", duration: "30min" },
+                { name: "Stanford 校园（胡佛塔 $5 登顶）", duration: "1.5h" }
+              ]
+            },
+            { time: "17:30", name: "前往 Burlingame" },
+            { time: "18:00", name: "机场附近还车", lat: 37.5771, lng: -122.3480 },
+            { time: "18:30", name: "入住 Bay Landing", lat: 37.5930, lng: -122.3660 },
+            { time: "19:30", name: "晚餐 + 早睡", icon: "food" }
+          ]
+        },
+        {
+          id: "d4", day: 4, date: "5/04", weekday: "周一",
+          title: "SFO → HNL｜孙中山公园 + Chinatown",
+          region: "hnl", color: "#2E86AB",
+          weather: { icon: "🌤", high: 29, low: 23, desc: "晴间多云" },
+          coverImg: "images/d4-waikiki.jpg",
+          flight: { code: "UA1175", from: "SFO", to: "HNL", time: "09:20→11:58" },
+          hotel: "Waikiki市中心酒店",
+          activities: [
+            { time: "06:30", name: "起床" },
+            { time: "07:00", end: "07:30", name: "酒店早餐" },
+            { time: "07:45", name: "出发去 SFO", lat: 37.6213, lng: -122.3790, icon: "airport" },
+            { time: "09:20", name: "起飞", icon: "airport" },
+            { time: "11:58", name: "到达 HNL", lat: 21.3187, lng: -157.9225, icon: "airport" },
+            { time: "12:00", end: "14:30", name: "取行李 + 去 Waikiki（入住/寄存）", lat: 21.2766, lng: -157.8278 },
+            { time: "15:00", name: "Uber 去 Downtown", lat: 21.3069, lng: -157.8583 },
+            { time: "15:20", end: "15:40", name: "ʻIolani Palace（外观拍照·周一闭馆）", lat: 21.3069, lng: -157.8583, icon: "sight" },
+            { time: "15:45", end: "16:10", name: "Dr. Sun Yat-sen Memorial Park", lat: 21.3128, lng: -157.8608, icon: "sight" },
+            { time: "16:15", end: "16:45", name: "Honolulu Chinatown 逛逛", lat: 21.3133, lng: -157.8631, icon: "food" },
+            { time: "16:45", name: "Uber 回 Waikiki" },
+            { time: "17:30", name: "日落散步", lat: 21.2766, lng: -157.8278, icon: "sight" },
+            { time: "19:00", name: "晚餐", icon: "food" },
+            { time: "21:00", name: "休息" }
+          ]
+        },
+        {
+          id: "d5", day: 5, date: "5/05", weekday: "周二",
+          title: "Diamond Head + 珍珠港深度游",
+          region: "hnl", color: "#2E86AB",
+          weather: { icon: "🌤", high: 29, low: 23, desc: "晴间多云" },
+          coverImg: "images/d5-diamond-head.jpg",
+          hotel: "Waikiki市中心酒店",
+          activities: [
+            { time: "08:00", name: "起床" },
+            { time: "08:30", name: "出发去 Diamond Head" },
+            { time: "09:00", end: "11:00", name: "Diamond Head 慢爬 + 山顶拍照（9am 场）", lat: 21.2614, lng: -157.8059, icon: "sight" },
+            { time: "11:30", name: "回酒店休息" },
+            { time: "12:00", name: "午餐" },
+            { time: "12:30", name: "出发去 Pearl Harbor" },
+            { time: "13:00", end: "17:30", name: "珍珠港四件套", lat: 21.3649, lng: -157.9517, icon: "sight",
+              subs: [
+                { name: "USS Arizona Memorial", duration: "1–1.5h" },
+                { name: "USS Missouri 密苏里号战列舰", duration: "1–1.5h" },
+                { name: "USS Bowfin 潜艇博物馆", duration: "45min" },
+                { name: "太平洋航空博物馆", duration: "45min–1h" }
+              ]
+            },
+            { time: "18:00", name: "回 Waikiki" },
+            { time: "19:00", name: "晚餐", icon: "food" }
+          ]
+        },
+        {
+          id: "d6", day: 6, date: "5/06", weekday: "周三",
+          title: "飞大岛 → Mauna Kea 观星",
+          region: "hilo", color: "#2E86AB",
+          weather: { icon: "🌤", high: 29, low: 23, desc: "晴间多云" },
+          coverImg: "images/d6-mauna-kea.jpg",
+          flight: { code: "待改签", from: "HNL", to: "ITO", time: "下午航班（需改签）" },
+          hotel: "Hilo市区酒店",
+          carRental: "大岛 Hilo 租车（机场取）",
+          activities: [
+            { time: "08:00", name: "起床 + 早餐" },
+            { time: "09:30", end: "10:30", name: "整理行李、退房寄存大件" },
+            { time: "11:00", name: "出发去 HNL 机场", icon: "airport" },
+            { time: "13:30", name: "下午航班飞 Hilo（需改签早班）", lat: 19.7204, lng: -155.0483, icon: "airport" },
+            { time: "15:00", end: "15:30", name: "抵达 ITO / 取行李 + 取车" },
+            { time: "15:30", name: "直奔 Mauna Kea（约1h车程）" },
+            { time: "16:30", name: "抵达 Mauna Kea Visitor Station（2,800m）", lat: 19.7584, lng: -155.4553, icon: "sight" },
+            { time: "17:00", end: "20:00", name: "Visitor Station 观星（不上山顶，轻松看星空）", lat: 19.7584, lng: -155.4553, icon: "activity",
+              subs: [
+                { name: "山上 2–10°C，带厚外套/帽子/手套", duration: "⚠️" },
+                { name: "提前 1.5h 到抢车位（先到先得）", duration: "提醒" },
+                { name: "带食物和水，山上没餐厅", duration: "提醒" }
+              ]
+            },
+            { time: "20:30", name: "下山回 Hilo（约1h）" },
+            { time: "21:30", name: "入住 Hilo 市区酒店", lat: 19.7241, lng: -155.0868 },
+            { time: "22:00", name: "休息" }
+          ]
+        },
+        {
+          id: "d7", day: 7, date: "5/07", weekday: "周四",
+          title: "火山国家公园整天 → 晚飞回 Oʻahu",
+          region: "hilo", color: "#A23B34",
+          weather: { icon: "🌦", high: 27, low: 20, desc: "局部阵雨" },
+          coverImg: "images/d7-volcano.jpg",
+          flight: { code: "AS1111", from: "ITO", to: "HNL", time: "19:44→20:39" },
+          hotel: "Waikiki市中心酒店",
+          carRental: "大岛 Hilo 租车（前日已取）",
+          activities: [
+            { time: "08:30", name: "早餐" },
+            { time: "09:30", name: "Hilo 出发（行李放车上）" },
+            { time: "10:30", end: "12:30", name: "火山核心三件套", lat: 19.4194, lng: -155.2874, icon: "sight",
+              subs: [
+                { name: "Kilauea Caldera 火山口观景台", duration: "30min" },
+                { name: "Steam Vents 蒸汽口", duration: "15min" },
+                { name: "Nahuku (Thurston) Lava Tube 熔岩隧道", duration: "30min" }
+              ]
+            },
+            { time: "12:30", end: "13:30", name: "午餐/补给", icon: "food" },
+            { time: "13:30", end: "15:30", name: "Chain of Craters Road（开车观景）", lat: 19.3097, lng: -155.1000, icon: "sight",
+              subs: [
+                { name: "19 英里海岸线下坡公路，选 2-3 个点停车拍照", duration: "2h" },
+                { name: "出发前加满油，园内没有加油站", duration: "⚠️" }
+              ]
+            },
+            { time: "15:30", name: "回撤" },
+            { time: "16:30", end: "17:00", name: "回到 Hilo" },
+            { time: "17:00", end: "18:15", name: "加油/还车/机场办理", lat: 19.7204, lng: -155.0483, icon: "airport" },
+            { time: "19:44", name: "飞回 HNL", icon: "airport" },
+            { time: "21:30", name: "回到 Waikiki", lat: 21.2766, lng: -157.8278 },
+            { time: "22:30", name: "睡觉" }
+          ]
+        },
+        {
+          id: "d8", day: 8, date: "5/08", weekday: "周五",
+          title: "恐龙湾 + Kualoa 电影场景 + 平等院",
+          region: "hnl", color: "#2E86AB",
+          weather: { icon: "🌤", high: 29, low: 23, desc: "晴间多云" },
+          coverImg: "images/d8-kualoa.jpg",
+          hotel: "Waikiki市中心酒店",
+          carRental: "欧胡岛 Waikiki 租车",
+          activities: [
+            { time: "06:15", name: "起床 + Waikiki 取车", lat: 21.2766, lng: -157.8278 },
+            { time: "06:45", end: "10:00", name: "Hanauma Bay 恐龙湾浮潜（需预约）", lat: 21.2690, lng: -157.6940, icon: "activity",
+              subs: [
+                { name: "入场先看 9 分钟教育短片（必看）", duration: "必须" },
+                { name: "浮潜装备现场租", duration: "$20" },
+                { name: "用 reef-safe 防晒霜（夏威夷法规）", duration: "⚠️" }
+              ]
+            },
+            { time: "10:00", name: "开车去 Kualoa Ranch（约45min）" },
+            { time: "10:45", end: "11:30", name: "午饭（Kualoa 附近）", icon: "food" },
+            { time: "12:00", end: "12:30", name: "Kualoa check-in / 等候出发" },
+            { time: "12:30", end: "14:00", name: "Hollywood Movie Sites Tour（观光大巴）", lat: 21.5213, lng: -157.8374, icon: "activity",
+              subs: [
+                { name: "侏罗纪公园/侏罗纪世界取景地", duration: "打卡" },
+                { name: "金刚：骷髅岛骨架场景", duration: "打卡" },
+                { name: "二战碉堡电影道具展", duration: "15min" }
+              ]
+            },
+            { time: "14:00", name: "开车去平等院（约15min）" },
+            { time: "14:15", end: "15:00", name: "平等院 Byodo-In Temple + 张学良墓", lat: 21.4300, lng: -157.8320, icon: "sight",
+              subs: [
+                { name: "入口敲 Bon-sho 钟（净化心灵）", duration: "仪式" },
+                { name: "锦鲤池 + 日式庭园", duration: "15min" },
+                { name: "张学良赵一荻合葬墓（园区内步行）", duration: "10min" }
+              ]
+            },
+            { time: "15:00", name: "开回 Waikiki 还车（约40min）" },
+            { time: "15:45", name: "冲澡休息" },
+            { time: "17:30", name: "Waikiki 海边散步", lat: 21.2766, lng: -157.8278, icon: "sight" },
+            { time: "19:00", name: "最后一晚晚餐", icon: "food" },
+            { time: "21:00", name: "休息" }
+          ]
+        },
+        {
+          id: "d9", day: 9, date: "5/09", weekday: "周六",
+          title: "HNL → ICN（中午起飞）",
+          region: "hnl", color: "#2E86AB",
+          weather: { icon: "🌤", high: 29, low: 23, desc: "晴间多云" },
+          coverImg: "images/d9-airplane.jpg",
+          flight: { code: "KE054", from: "HNL", to: "ICN", time: "12:35→5/10 17:45" },
+          activities: [
+            { time: "07:30", name: "起床 + 打包" },
+            { time: "09:00", name: "退房" },
+            { time: "09:30", name: "出发去机场", lat: 21.3187, lng: -157.9225, icon: "airport" },
+            { time: "12:35", name: "起飞 KE054", icon: "airport" }
+          ]
+        }
+      ],
+      cities: {
+        overview: { center: [30, 180], zoom: 2 },
+        sfo: { center: [37.75, 237.58], zoom: 12, name: "旧金山" },
+        hnl: { center: [21.35, 202.12], zoom: 11, name: "欧胡岛" },
+        hilo: { center: [19.60, 204.80], zoom: 10, name: "大岛" }
+      },
+      flightRoutes: [
+        { order: 1, from: [22.3080, 113.9185], to: [37.6213, -122.3790], label: "HKG→SFO", color: "#E53935", date: "5/01" },
+        { order: 2, from: [37.6213, -122.3790], to: [21.3187, -157.9225], label: "SFO→HNL", color: "#1E88E5", date: "5/04" },
+        { order: 3, from: [21.3187, -157.9225], to: [19.7204, -155.0483], label: "HNL→ITO", color: "#43A047", date: "5/06" },
+        { order: 4, from: [19.7204, -155.0483], to: [21.3187, -157.9225], label: "ITO→HNL", color: "#00897B", date: "5/07" },
+        { order: 5, from: [21.3187, -157.9225], to: [37.5665, 126.9780], label: "HNL→ICN", color: "#8E24AA", date: "5/09" },
+        { order: 6, from: [37.5665, 126.9780], to: [22.3080, 113.9185], label: "ICN→HKG", color: "#F4511E", date: "5/10" }
+      ]
+    };
+
+    // ===== MAP INITIALIZATION =====
+    const map = L.map('map', {
+      center: [30, 180],
+      zoom: 2,
+      zoomControl: true,
+      worldCopyJump: false,
+      maxBounds: [[-85, -30], [85, 390]],
+      maxBoundsViscosity: 1.0,
+      minZoom: 2
+    });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap',
+      maxZoom: 18,
+      noWrap: false
+    }).addTo(map);
+
+    // ===== CITY MARKERS =====
+    const cityCoords = {
+      hkg: { lat: 22.3080, lng: 113.9185, name: "香港", color: "#666" },
+      sfo: { lat: 37.6213, lng: 237.621, name: "旧金山", color: "#E8913A" },
+      hnl: { lat: 21.3187, lng: 202.0775, name: "檀香山", color: "#2E86AB" },
+      hilo: { lat: 19.7204, lng: 204.9517, name: "希洛", color: "#A23B34" },
+      icn: { lat: 37.5665, lng: 126.9780, name: "首尔", color: "#666" }
+    };
+
+    Object.values(cityCoords).forEach(city => {
+      const icon = L.divIcon({
+        className: 'city-marker',
+        html: `<div style="background:${city.color};color:#fff;padding:2px 10px;border-radius:999px;font-size:0.75rem;font-weight:600;white-space:nowrap;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.3)">${city.name}</div>`,
+        iconSize: [null, null],
+        iconAnchor: [30, 12]
+      });
+      L.marker([city.lat, city.lng], { icon }).addTo(map);
+    });
+
+    // ===== FLIGHT ROUTE POLYLINES =====
+    // Convert coordinates to Pacific-centered (lng 0-360 range, Asia ~110-130, Americas ~200-240)
+    function toPacificLng(lng) {
+      return lng < 0 ? lng + 360 : lng;
+    }
+
+    function getCurvedPoints(from, to, numPoints) {
+      const points = [];
+      const fromLng = toPacificLng(from[1]);
+      const toLng = toPacificLng(to[1]);
+      const lngDiff = toLng - fromLng;
+      const latDiff = to[0] - from[0];
+      const dist = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff);
+      const offset = dist * 0.12;
+      for (let i = 0; i <= numPoints; i++) {
+        const t = i / numPoints;
+        const lat = from[0] + latDiff * t + Math.sin(Math.PI * t) * offset;
+        const lng = fromLng + lngDiff * t;
+        points.push([lat, lng]);
+      }
+      return points;
+    }
+
+    const flightLayer = L.layerGroup().addTo(map);
+    TRIP_DATA.flightRoutes.forEach(route => {
+      const curvedPts = getCurvedPoints(route.from, route.to, 60);
+      L.polyline(curvedPts, {
+        color: route.color,
+        weight: 2.5,
+        dashArray: '10, 6',
+        opacity: 0.8
+      }).addTo(flightLayer);
+
+      // Add numbered label at midpoint of curve
+      const mid = curvedPts[Math.floor(curvedPts.length / 2)];
+      const numIcon = L.divIcon({
+        className: 'route-num-marker',
+        html: `<div style="background:${route.color};color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,0.4);border:2px solid #fff">${route.order}</div>`,
+        iconSize: [22, 22],
+        iconAnchor: [11, 11]
+      });
+      L.marker(mid, { icon: numIcon, interactive: true })
+        .bindTooltip(`${route.order}. ${route.label}  ${route.date}`, { direction: 'top', offset: [0, -12] })
+        .addTo(flightLayer);
+    });
+
+    // ===== ACTIVITY MARKERS + DAY LAYERS =====
+    const dayLayers = {};
+    // Store per-day numbered activities for timeline rendering
+    const dayActivityNumbers = {};
+
+    TRIP_DATA.days.forEach(day => {
+      const layerGroup = L.layerGroup();
+      dayLayers[day.id] = layerGroup;
+
+      // --- Collect geo-activities with numbering & dedup ---
+      const geoActivities = [];
+      const actNumMap = new Map(); // activityIndex -> display number
+      let num = 0;
+      day.activities.forEach((a, idx) => {
+        if (!a.lat) return;
+        const mapLng = a.lng < 0 ? a.lng + 360 : a.lng;
+        // Merge with previous if same location (< 0.002°)
+        const prev = geoActivities[geoActivities.length - 1];
+        if (prev && Math.abs(prev.lat - a.lat) < 0.002 && Math.abs(prev.mapLng - mapLng) < 0.002) {
+          // Same location — share the previous number
+          actNumMap.set(idx, prev.num);
+          prev.names.push({ name: a.name, time: a.end ? `${a.time}–${a.end}` : a.time });
+          return;
+        }
+        num++;
+        actNumMap.set(idx, num);
+        geoActivities.push({ lat: a.lat, mapLng, num, names: [{ name: a.name, time: a.end ? `${a.time}–${a.end}` : a.time }] });
+      });
+      dayActivityNumbers[day.id] = actNumMap;
+
+      // --- Numbered markers ---
+      geoActivities.forEach(ga => {
+        const icon = L.divIcon({
+          className: 'activity-num-marker',
+          html: `<div class="activity-num-icon" style="color:${day.color}">${ga.num}</div>`,
+          iconSize: [22, 22],
+          iconAnchor: [11, 11]
+        });
+        const marker = L.marker([ga.lat, ga.mapLng], { icon });
+        const popupLines = ga.names.map(n => `<b>${n.name}</b><br>${n.time}`).join('<hr style="margin:4px 0">');
+        marker.bindPopup(popupLines);
+        layerGroup.addLayer(marker);
+      });
+
+      // --- Filter route points (remove round-trips) ---
+      const rawPts = geoActivities.map(ga => [ga.lat, ga.mapLng]);
+      const routePoints = [];
+      for (let i = 0; i < rawPts.length; i++) {
+        const pt = rawPts[i];
+        // A->B->A round-trip filter: skip if current point matches two positions back
+        if (routePoints.length >= 2) {
+          const backBack = routePoints[routePoints.length - 2];
+          if (Math.abs(pt[0] - backBack[0]) < 0.002 && Math.abs(pt[1] - backBack[1]) < 0.002) {
+            continue;
+          }
+        }
+        // Deduplicate consecutive same location
+        const last = routePoints[routePoints.length - 1];
+        if (!last || Math.abs(last[0] - pt[0]) > 0.002 || Math.abs(last[1] - pt[1]) > 0.002) {
+          routePoints.push(pt);
+        }
+      }
+
+      // --- Build large curved segments between stops ---
+      function curveSegment(p1, p2, nPts) {
+        const pts = [];
+        const dlat = p2[0] - p1[0];
+        const dlng = p2[1] - p1[1];
+        const dist = Math.sqrt(dlat * dlat + dlng * dlng);
+        const arcOffset = dist * 0.3;
+        for (let j = 0; j <= nPts; j++) {
+          const t = j / nPts;
+          const lat = p1[0] + dlat * t + Math.sin(Math.PI * t) * arcOffset;
+          const lng = p1[1] + dlng * t;
+          pts.push([lat, lng]);
+        }
+        return pts;
+      }
+
+      if (routePoints.length >= 2) {
+        // Pass 1: white solid outline (bottom layer)
+        for (let i = 0; i < routePoints.length - 1; i++) {
+          const seg = curveSegment(routePoints[i], routePoints[i + 1], 24);
+          layerGroup.addLayer(L.polyline(seg, {
+            color: '#fff',
+            weight: 10,
+            opacity: 0.9,
+            lineCap: 'round',
+            lineJoin: 'round'
+          }));
+        }
+        // Pass 2: colored dashed arcs (top layer)
+        for (let i = 0; i < routePoints.length - 1; i++) {
+          const seg = curveSegment(routePoints[i], routePoints[i + 1], 24);
+          layerGroup.addLayer(L.polyline(seg, {
+            color: day.color,
+            weight: 6,
+            opacity: 1,
+            dashArray: '16, 10',
+            lineCap: 'round',
+            lineJoin: 'round'
+          }));
+        }
+      }
+    });
+
+    // ===== ZOOM-DEPENDENT LAYER VISIBILITY =====
+    const ACTIVITY_MIN_ZOOM = 9;
+    let activeDayId = null;
+
+    function syncLayerVisibility() {
+      const zoom = map.getZoom();
+      // Show/hide daily activity layer based on zoom
+      if (activeDayId && dayLayers[activeDayId]) {
+        const layer = dayLayers[activeDayId];
+        if (zoom >= ACTIVITY_MIN_ZOOM && !map.hasLayer(layer)) {
+          layer.addTo(map);
+        } else if (zoom < ACTIVITY_MIN_ZOOM && map.hasLayer(layer)) {
+          map.removeLayer(layer);
+        }
+      }
+      // Hide flight routes when zoomed into city detail, show when zoomed out
+      if (zoom >= ACTIVITY_MIN_ZOOM && map.hasLayer(flightLayer)) {
+        map.removeLayer(flightLayer);
+      } else if (zoom < ACTIVITY_MIN_ZOOM && !map.hasLayer(flightLayer)) {
+        flightLayer.addTo(map);
+      }
+    }
+
+    map.on('zoomend', syncLayerVisibility);
+
+    // ===== SHOW OVERVIEW =====
+    function showOverview() {
+      activeDayId = null;
+      Object.values(dayLayers).forEach(l => map.removeLayer(l));
+      if (!map.hasLayer(flightLayer)) flightLayer.addTo(map);
+      map.setView(TRIP_DATA.cities.overview.center, TRIP_DATA.cities.overview.zoom);
+      document.querySelectorAll('.day-card').forEach(c => c.classList.remove('active'));
+    }
+
+    // ===== ZOOM TO REGION =====
+    function zoomToRegion(region, dayId) {
+      Object.values(dayLayers).forEach(l => map.removeLayer(l));
+      activeDayId = dayId;
+      if (dayLayers[dayId]) dayLayers[dayId].addTo(map);
+      const city = TRIP_DATA.cities[region];
+      if (city) map.setView(city.center, city.zoom, { animate: true });
+      document.querySelectorAll('.day-card').forEach(c => c.classList.remove('active'));
+      const card = document.getElementById('card-' + dayId);
+      if (card) card.classList.add('active');
+    }
+
+    // ===== TIMELINE ITEM CLICK DELEGATION =====
+    document.addEventListener('click', function(e) {
+      const item = e.target.closest('.timeline-item.has-location');
+      if (!item) return;
+      const lat = parseFloat(item.dataset.lat);
+      const lng = parseFloat(item.dataset.lng);
+      const mapLng = lng < 0 ? lng + 360 : lng;
+      const dayId = item.dataset.day;
+      activeDayId = dayId;
+      if (dayLayers[dayId] && !map.hasLayer(dayLayers[dayId])) {
+        Object.values(dayLayers).forEach(l => map.removeLayer(l));
+        dayLayers[dayId].addTo(map);
+      }
+      map.setView([lat, mapLng], 14, { animate: true });
+      dayLayers[dayId].eachLayer(marker => {
+        const mll = marker.getLatLng && marker.getLatLng();
+        if (mll && Math.abs(mll.lat - lat) < 0.001 && Math.abs(mll.lng - mapLng) < 0.001) {
+          marker.openPopup();
+        }
+      });
+    });
+
+    // ===== RENDER SUMMARY =====
+    function renderSummary() {
+      const panel = document.getElementById('itinerary-panel');
+
+      // Flight table
+      let flightRows = TRIP_DATA.flights.map(f =>
+        `<tr>
+          <td>${f.date}</td>
+          <td><strong>${f.code}</strong></td>
+          <td>${f.fromName}(${f.from}) → ${f.toName}(${f.to})</td>
+          <td>${f.depart} → ${f.arrive}</td>
+        </tr>`
+      ).join('');
+
+      // Hotel table
+      let hotelRows = TRIP_DATA.hotels.map(h =>
+        `<tr>
+          <td>${h.dates}<br><small>${h.nights}晚</small></td>
+          <td>${h.name}</td>
+          <td>${h.note || ''}</td>
+        </tr>`
+      ).join('');
+
+      // Car rental table
+      let carRows = TRIP_DATA.carRentals.map(c =>
+        `<tr>
+          <td>${c.date}</td>
+          <td>${c.location}</td>
+          <td>${c.detail}</td>
+        </tr>`
+      ).join('');
+
+      // Checklist
+      const checkedItems = JSON.parse(localStorage.getItem('checklist') || '{}');
+      let checklistItems = TRIP_DATA.bookingChecklist.map((item, i) => {
+        const checked = checkedItems[i] ? ' checked' : '';
+        const doneClass = checkedItems[i] ? ' class="done"' : '';
+        return `<li${doneClass}><label><input type="checkbox" data-idx="${i}"${checked}><span>${item}</span></label></li>`;
+      }).join('');
+
+      panel.innerHTML = `
+        <div class="summary-section">
+          <h2>✈️ 航班总览</h2>
+          <table class="summary-table">
+            <thead>
+              <tr><th>日期</th><th>航班</th><th>航线</th><th>时间</th></tr>
+            </thead>
+            <tbody>${flightRows}</tbody>
+          </table>
+        </div>
+
+        <div class="summary-section">
+          <h2>🏨 酒店总览</h2>
+          <table class="summary-table">
+            <thead>
+              <tr><th>日期/晚数</th><th>酒店</th><th>备注</th></tr>
+            </thead>
+            <tbody>${hotelRows}</tbody>
+          </table>
+        </div>
+
+        <div class="summary-section">
+          <h2>🚗 租车总览</h2>
+          <table class="summary-table">
+            <thead>
+              <tr><th>日期</th><th>地点</th><th>详情</th></tr>
+            </thead>
+            <tbody>${carRows}</tbody>
+          </table>
+        </div>
+
+        <div class="summary-section">
+          <h2>📋 待预订清单</h2>
+          <ul class="checklist">${checklistItems}</ul>
+        </div>
+
+        <div class="summary-section">
+          <h2>🆘 紧急联系</h2>
+          <div class="emergency-grid">
+            <div class="emergency-card">
+              <div class="em-title">中国驻旧金山总领事馆</div>
+              <div class="em-detail">📞 +1-415-852-5900</div>
+              <div class="em-detail">📍 1450 Laguna St, San Francisco</div>
+            </div>
+            <div class="emergency-card">
+              <div class="em-title">中国驻洛杉矶总领事馆（管辖夏威夷）</div>
+              <div class="em-detail">📞 +1-213-807-8088</div>
+            </div>
+            <div class="emergency-card">
+              <div class="em-title">美国紧急电话</div>
+              <div class="em-detail">🚨 911（警察/消防/急救）</div>
+            </div>
+            <div class="emergency-card">
+              <div class="em-title">航司客服</div>
+              <div class="em-detail">United Airlines: +1-800-864-8331</div>
+              <div class="em-detail">Alaska Airlines: +1-800-252-7522</div>
+              <div class="em-detail">Korean Air: +1-800-438-5000</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="day-cards"></div>
+      `;
+
+      // Checklist checkbox interaction
+      panel.querySelectorAll('.checklist input[type="checkbox"]').forEach(cb => {
+        cb.addEventListener('change', e => {
+          const idx = e.target.dataset.idx;
+          const stored = JSON.parse(localStorage.getItem('checklist') || '{}');
+          if (e.target.checked) {
+            stored[idx] = true;
+            e.target.closest('li').classList.add('done');
+          } else {
+            delete stored[idx];
+            e.target.closest('li').classList.remove('done');
+          }
+          localStorage.setItem('checklist', JSON.stringify(stored));
+        });
+      });
+    }
+
+    // ===== RENDER DAY CARDS =====
+    function renderDayCards() {
+      const container = document.getElementById('day-cards');
+      let html = '';
+
+      TRIP_DATA.days.forEach(day => {
+        // Build badges
+        let badges = '';
+        if (day.flight) {
+          badges += `<span class="tag-flight">✈ ${day.flight.code} ${day.flight.from}→${day.flight.to}</span>`;
+        }
+        if (day.hotel) {
+          badges += `<span class="tag-hotel">🏨 ${day.hotel}</span>`;
+        }
+        if (day.carRental) {
+          badges += `<span class="tag-car">🚗 ${day.carRental}</span>`;
+        }
+
+        // Build timeline
+        const actNums = dayActivityNumbers[day.id] || new Map();
+        let timelineItems = day.activities.map((act, idx) => {
+          const hasLoc = act.lat !== undefined && act.lng !== undefined;
+          const timeStr = act.end ? `${act.time}–${act.end}` : act.time;
+          const locAttrs = hasLoc
+            ? ` data-lat="${act.lat}" data-lng="${act.lng}" data-day="${day.id}"`
+            : '';
+          const locClass = hasLoc ? ' has-location' : '';
+
+          const dotStyle = hasLoc ? ` style="--dot-color: ${day.color}"` : '';
+          const numBadge = actNums.has(idx)
+            ? `<span class="tl-num" style="background:${day.color}">${actNums.get(idx)}</span>`
+            : '';
+          const subsHtml = act.subs
+            ? `<ul class="tl-subs">${act.subs.map(s => `<li>${s.name}<span class="tl-sub-dur">${s.duration}</span></li>`).join('')}</ul>`
+            : '';
+          return `<div class="timeline-item${locClass}"${locAttrs}${dotStyle}>
+            <span class="tl-time">${numBadge}${timeStr}</span>
+            <span class="tl-name">${act.name}</span>${subsHtml}
+          </div>`;
+        }).join('');
+
+        html += `
+          <div class="day-card" id="card-${day.id}" data-region="${day.region}" style="border-left: 4px solid ${day.color}">
+            <div class="day-card-cover" style="background-image: url('${day.coverImg}')"></div>
+            <div class="day-card-header" onclick="toggleCard('${day.id}')">
+              <span class="day-num" style="color:${day.color}">D${day.day}</span>
+              <div class="day-info">
+                <div class="day-title">${day.title}</div>
+                <div class="day-date">${day.date} ${day.weekday}</div>
+                <div class="day-weather">${day.weather.icon} ${day.weather.high}°/${day.weather.low}° ${day.weather.desc}</div>
+              </div>
+              <span class="expand-icon">▼</span>
+            </div>
+            <div class="day-card-badges">${badges}</div>
+            <div class="day-card-body">
+              <div class="timeline">
+                ${timelineItems}
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    // ===== TOGGLE CARD =====
+    function toggleCard(dayId) {
+      const card = document.getElementById('card-' + dayId);
+      const wasOpen = card.classList.contains('open');
+
+      // Close all cards first
+      document.querySelectorAll('.day-card.open').forEach(c => {
+        c.classList.remove('open');
+      });
+
+      // If it wasn't open, open it and zoom to region
+      if (!wasOpen) {
+        card.classList.add('open');
+        const region = card.dataset.region;
+        zoomToRegion(region, dayId);
+        if (window.innerWidth <= 768) {
+          setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+        }
+      } else {
+        // Card was open, now closing — show overview
+        showOverview();
+      }
+    }
+
+    // ===== COUNTDOWN =====
+    function updateCountdown() {
+      const tripDate = new Date('2026-05-01T00:00:00');
+      const now = new Date();
+      const diff = tripDate - now;
+      const el = document.getElementById('countdown');
+      if (diff > 0) {
+        const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+        el.innerHTML = `距离出发还有 <span class="countdown-num">${days}</span> 天`;
+      } else if (diff > -9 * 24 * 60 * 60 * 1000) {
+        el.textContent = '🎉 旅途进行中！';
+      } else {
+        el.textContent = '✅ 旅途已结束';
+      }
+    }
+
+    // ===== THEME TOGGLE =====
+    function toggleTheme() {
+      const html = document.documentElement;
+      const current = html.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      document.getElementById('theme-toggle').textContent = next === 'dark' ? '☀️' : '🌙';
+      localStorage.setItem('theme', next);
+    }
+
+    // ===== TRIP PROGRESS BAR =====
+    function renderProgress(activeDayNum) {
+      const container = document.getElementById('trip-progress');
+      const tripStart = new Date('2026-05-01');
+      const now = new Date();
+      const todayDayNum = Math.floor((now - tripStart) / (1000*60*60*24)) + 1;
+
+      let html = '';
+      TRIP_DATA.days.forEach((day, idx) => {
+        const isPast = todayDayNum > day.day;
+        const isToday = todayDayNum === day.day;
+        const isActive = activeDayNum === day.day;
+        let cls = 'prog-day';
+        if (isPast) cls += ' past';
+        if (isActive || isToday) cls += ' active';
+
+        html += `<div class="${cls}" onclick="toggleCard('${day.id}')">
+          <div class="prog-dot" style="${isActive ? 'border-color:' + day.color + ';background:' + day.color : ''}"></div>
+          <span class="prog-label">D${day.day}</span>
+        </div>`;
+        if (idx < TRIP_DATA.days.length - 1) {
+          html += `<div class="prog-line${isPast ? ' past' : ''}"></div>`;
+        }
+      });
+      container.innerHTML = html;
+    }
+
+    // Patch toggleCard to update progress bar
+    const _origToggleCard = toggleCard;
+    toggleCard = function(dayId) {
+      _origToggleCard(dayId);
+      const day = TRIP_DATA.days.find(d => d.id === dayId);
+      const card = document.getElementById('card-' + dayId);
+      if (day && card && card.classList.contains('open')) {
+        renderProgress(day.day);
+      } else {
+        renderProgress(null);
+      }
+    };
+
+    // Patch showOverview to reset progress
+    const _origShowOverview = showOverview;
+    showOverview = function() {
+      _origShowOverview();
+      renderProgress(null);
+    };
+
+    // ===== INIT =====
+    renderSummary();
+    renderDayCards();
+    updateCountdown();
+    renderProgress(null);
+
+    // Auto-detect theme preference on load
+    (function() {
+      const saved = localStorage.getItem('theme');
+      if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        document.getElementById('theme-toggle').textContent = '☀️';
+      }
+    })();
+
+    toggleCard('d1');
+  </script>
+</body>
+</html>
