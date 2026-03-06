@@ -636,84 +636,141 @@
     [data-theme="dark"] .tag-hotel { background: #3a2a1a; color: #f0a060; }
     [data-theme="dark"] .tag-car { background: #1a3a1a; color: #6fd06f; }
     /* ===== Password Gate ===== */
+    @keyframes pw-fade-in {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
     #pw-gate {
       position: fixed;
       inset: 0;
       z-index: 99999;
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      background: #fafafa;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-direction: column;
+      overflow: hidden;
     }
     #pw-gate.hidden { display: none; }
     .pw-box {
-      background: rgba(255,255,255,0.08);
-      backdrop-filter: blur(20px);
-      border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 16px;
-      padding: 40px;
+      position: relative;
       text-align: center;
-      max-width: 360px;
-      width: 90%;
+      max-width: 300px;
+      width: 85%;
+      animation: pw-fade-in 0.8s ease-out;
+    }
+    .pw-route {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      margin-bottom: 36px;
+      font-size: 0.65rem;
+      letter-spacing: 3px;
+      color: #bbb;
+    }
+    .pw-route-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .pw-route-line {
+      width: 24px;
+      height: 1px;
+      background: #ddd;
+      display: inline-block;
+      margin: 0 6px;
+    }
+    .pw-route-code {
+      font-size: 0.6rem;
+      letter-spacing: 2px;
+      color: #aaa;
     }
     .pw-box h2 {
-      color: #fff;
-      font-size: 1.4rem;
-      margin: 0 0 8px;
+      color: #1a1a1a;
+      font-size: 1.5rem;
+      font-weight: 300;
+      margin: 0 0 6px;
+      letter-spacing: 0.5px;
     }
     .pw-box p {
-      color: rgba(255,255,255,0.5);
-      font-size: 0.85rem;
-      margin: 0 0 24px;
+      color: #bbb;
+      font-size: 0.78rem;
+      margin: 0 0 44px;
+      letter-spacing: 0.5px;
     }
     .pw-input-wrap {
       display: flex;
-      gap: 8px;
+      flex-direction: column;
+      gap: 12px;
     }
     .pw-input-wrap input {
-      flex: 1;
-      padding: 10px 14px;
-      border: 1px solid rgba(255,255,255,0.2);
-      border-radius: 8px;
-      background: rgba(255,255,255,0.1);
-      color: #fff;
+      width: 100%;
+      padding: 14px 0;
+      border: none;
+      border-bottom: 1px solid #e0e0e0;
+      border-radius: 0;
+      background: transparent;
+      color: #1a1a1a;
       font-size: 0.95rem;
+      text-align: center;
+      letter-spacing: 2px;
       outline: none;
-      transition: border-color 0.2s;
+      transition: border-color 0.3s;
+      box-sizing: border-box;
     }
     .pw-input-wrap input:focus {
-      border-color: rgba(255,255,255,0.5);
+      border-bottom-color: #E8913A;
     }
-    .pw-input-wrap input::placeholder { color: rgba(255,255,255,0.3); }
+    .pw-input-wrap input::placeholder {
+      color: #d0d0d0;
+      letter-spacing: 1px;
+    }
     .pw-input-wrap button {
-      padding: 10px 20px;
-      border: none;
-      border-radius: 8px;
-      background: #e8913a;
-      color: #fff;
-      font-weight: 600;
-      font-size: 0.9rem;
+      padding: 13px 0;
+      border: 1px solid #1a1a1a;
+      border-radius: 40px;
+      background: transparent;
+      color: #1a1a1a;
+      font-weight: 400;
+      font-size: 0.85rem;
+      letter-spacing: 2px;
       cursor: pointer;
-      transition: background 0.2s;
+      transition: all 0.3s;
+      margin-top: 4px;
     }
-    .pw-input-wrap button:hover { background: #d07a2a; }
+    .pw-input-wrap button:hover {
+      background: #E8913A;
+      color: #fff;
+      border-color: #E8913A;
+    }
     .pw-error {
-      color: #ff6b6b;
-      font-size: 0.8rem;
-      margin-top: 12px;
+      color: #A23B34;
+      font-size: 0.75rem;
+      margin-top: 20px;
       min-height: 1.2em;
+      letter-spacing: 0.5px;
     }
   </style>
 </head>
 <body>
   <div id="pw-gate">
     <div class="pw-box">
-      <h2>Trip Planner</h2>
-      <p>请输入密码查看行程</p>
+      <div class="pw-route">
+        <span class="pw-route-dot" style="background:#E8913A"></span><span class="pw-route-line"></span>
+        <span class="pw-route-code">SFO</span>
+        <span class="pw-route-line"></span><span class="pw-route-dot" style="background:#2E86AB"></span><span class="pw-route-line"></span>
+        <span class="pw-route-code">HNL</span>
+        <span class="pw-route-line"></span><span class="pw-route-dot" style="background:#A23B34"></span><span class="pw-route-line"></span>
+        <span class="pw-route-code">ITO</span>
+        <span class="pw-route-line"></span><span class="pw-route-dot" style="background:#2E86AB"></span>
+      </div>
+      <h2>San Francisco & Hawaii</h2>
+      <p>9 Days · May 2026</p>
       <div class="pw-input-wrap">
-        <input type="password" id="pw-input" placeholder="密码" autocomplete="off">
-        <button onclick="checkPw()">进入</button>
+        <input type="password" id="pw-input" placeholder="Password" autocomplete="off">
+        <button onclick="checkPw()">ENTER</button>
       </div>
       <div class="pw-error" id="pw-error"></div>
     </div>
