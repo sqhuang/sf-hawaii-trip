@@ -828,7 +828,15 @@
   </script>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script>
+    // ===== FIREBASE INIT =====
+    firebase.initializeApp({
+      databaseURL: 'https://travel-sf-hawaii-default-rtdb.asia-southeast1.firebasedatabase.app'
+    });
+    const fbChecklist = firebase.database().ref('checklist');
+
     // ===== TRIP DATA =====
     const TRIP_DATA = {
       title: "旧金山 + 夏威夷 9日行程",
@@ -1419,12 +1427,9 @@
         </tr>`
       ).join('');
 
-      // Checklist
-      const checkedItems = JSON.parse(localStorage.getItem('checklist') || '{}');
+      // Checklist (render unchecked first, Firebase will update)
       let checklistItems = TRIP_DATA.bookingChecklist.map((item, i) => {
-        const checked = checkedItems[i] ? ' checked' : '';
-        const doneClass = checkedItems[i] ? ' class="done"' : '';
-        return `<li${doneClass}><label><input type="checkbox" data-idx="${i}"${checked}><span>${item}</span></label></li>`;
+        return `<li><label><input type="checkbox" data-idx="${i}"><span>${item}</span></label></li>`;
       }).join('');
 
       panel.innerHTML = `
@@ -1491,19 +1496,30 @@
         <div id="day-cards"></div>
       `;
 
-      // Checklist checkbox interaction
+      // Checklist: write to Firebase on change
       panel.querySelectorAll('.checklist input[type="checkbox"]').forEach(cb => {
         cb.addEventListener('change', e => {
           const idx = e.target.dataset.idx;
-          const stored = JSON.parse(localStorage.getItem('checklist') || '{}');
           if (e.target.checked) {
-            stored[idx] = true;
-            e.target.closest('li').classList.add('done');
+            fbChecklist.child(idx).set(true);
           } else {
-            delete stored[idx];
-            e.target.closest('li').classList.remove('done');
+            fbChecklist.child(idx).remove();
           }
-          localStorage.setItem('checklist', JSON.stringify(stored));
+        });
+      });
+
+      // Checklist: listen to Firebase for real-time sync
+      fbChecklist.on('value', snap => {
+        const data = snap.val() || {};
+        panel.querySelectorAll('.checklist input[type="checkbox"]').forEach(cb => {
+          const idx = cb.dataset.idx;
+          const isChecked = !!data[idx];
+          cb.checked = isChecked;
+          if (isChecked) {
+            cb.closest('li').classList.add('done');
+          } else {
+            cb.closest('li').classList.remove('done');
+          }
         });
       });
     }
