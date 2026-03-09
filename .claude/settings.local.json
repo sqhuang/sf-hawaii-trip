@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl:*)",
+      "WebFetch(domain:unsplash.com)",
+      "WebFetch(domain:unpkg.com)",
+      "Bash(open:*)",
+      "WebFetch(domain:www.kualoa.com)",
+      "Bash(gh auth:*)",
+      "Bash(git:*)",
+      "Bash(brew install:*)",
+      "Bash(gh repo:*)",
+      "Bash(gh api:*)",
+      "Bash(npx netlify:*)"
+    ]
+  }
+}
