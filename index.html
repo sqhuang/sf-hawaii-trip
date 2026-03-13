@@ -886,8 +886,8 @@
       flights: [
         { date: "5/01", code: "UA862", from: "HKG", fromName: "香港", to: "SFO", toName: "旧金山", depart: "11:45", arrive: "09:20" },
         { date: "5/04", code: "UA1175", from: "SFO", fromName: "旧金山", to: "HNL", toName: "檀香山", depart: "09:20", arrive: "11:58" },
-        { date: "5/06", code: "待改签", from: "HNL", fromName: "檀香山", to: "ITO", toName: "希洛", depart: "下午", arrive: "待定", note: "需改签早班" },
-        { date: "5/07", code: "AS1111", from: "ITO", fromName: "希洛", to: "HNL", toName: "檀香山", depart: "19:44", arrive: "20:39" },
+        { date: "5/06", code: "AS1072", from: "HNL", fromName: "檀香山", to: "ITO", toName: "希洛", depart: "13:35", arrive: "14:31" },
+        { date: "5/07", code: "AS1091", from: "ITO", fromName: "希洛", to: "HNL", toName: "檀香山", depart: "17:59", arrive: "18:54" },
         { date: "5/09", code: "KE054", from: "HNL", fromName: "檀香山", to: "ICN", toName: "首尔", depart: "12:35", arrive: "5/10 17:45" },
         { date: "5/10", code: "KE2011", from: "ICN", fromName: "首尔", to: "HKG", toName: "香港", depart: "19:45", arrive: "22:45" }
       ],
@@ -895,7 +895,7 @@
         { dates: "5/01–5/03", nights: 2, name: "Holiday Inn Express & Suites Fisherman's Wharf", location: "550 North Point St, San Francisco", city: "sfo" },
         { dates: "5/03–5/04", nights: 1, name: "Bay Landing Hotel", location: "Burlingame", note: "含5/04早餐", city: "sfo" },
         { dates: "5/04–5/06 + 5/07–5/09", nights: 4, name: "Waikiki市中心酒店", location: "Waikiki, Honolulu", note: "连住，大岛行李放车上", city: "hnl" },
-        { dates: "5/06–5/07", nights: 1, name: "Hilo市区酒店", location: "Hilo, Big Island", city: "hilo" }
+        { dates: "5/06–5/07", nights: 1, name: "Hilo Reeds Bay Hotel", location: "175 Banyan Dr, Hilo", note: "入住15:00起，离店11:00前，☎️+1-808-934-7277", city: "hilo" }
       ],
       carRentals: [
         { date: "5/03", location: "旧金山", detail: "市区取车 → SFO/机场附近还车", duration: "1天" },
@@ -909,8 +909,8 @@
         "🟡 Kualoa Ranch Hollywood Movie Sites Tour — 尽早订，4-6周前常售罄",
         "🟡 Hanauma Bay 恐龙湾预约（早上 6:45 场）— gostateparks.hawaii.gov",
         "🟡 珍珠港 Passport to Pearl Harbor 套票（$89/人，含 Missouri+Bowfin+航空博物馆）",
-        "🟢 5/06 HNL→ITO 下午航班改签（原 19:35 改早班）",
-        "🟢 5/06 Hilo 酒店（1晚）+ Hilo 租车（确认能开 Mauna Kea Saddle Road）",
+        "✅ 5/06 AS1072 HNL 13:35→ITO 14:31 + 5/07 AS1091 ITO 17:59→HNL 18:54 已订",
+        "✅ 5/06 Hilo Reeds Bay Hotel（1晚）已订 + 🟢 Hilo 租车（确认能开 Mauna Kea Saddle Road）",
         "🟢 5/03 旧金山租车（市区取→机场附近还）",
         "🟢 Waikiki 市中心酒店（5/04–5/09 连住）"
       ],
@@ -1055,15 +1055,15 @@
           region: "hilo", color: "#2E86AB",
           weather: { icon: "🌤", high: 29, low: 23, desc: "晴间多云" },
           coverImg: "images/d6-mauna-kea.jpg",
-          flight: { code: "待改签", from: "HNL", to: "ITO", time: "下午航班（需改签）" },
-          hotel: "Hilo市区酒店",
+          flight: { code: "AS1072", from: "HNL", to: "ITO", time: "13:35→14:31" },
+          hotel: "Hilo Reeds Bay Hotel（175 Banyan Dr）",
           carRental: "大岛 Hilo 租车（机场取）",
           activities: [
             { time: "08:00", name: "起床 + 早餐" },
             { time: "09:30", end: "10:30", name: "整理行李、退房寄存大件" },
-            { time: "11:00", name: "出发去 HNL 机场", icon: "airport" },
-            { time: "13:30", name: "下午航班飞 Hilo（需改签早班）", lat: 19.7204, lng: -155.0483, icon: "airport" },
-            { time: "15:00", end: "15:30", name: "抵达 ITO / 取行李 + 取车" },
+            { time: "11:00", name: "出发去 HNL 机场 T1", icon: "airport" },
+            { time: "13:35", name: "起飞 AS1072", lat: 19.7204, lng: -155.0483, icon: "airport" },
+            { time: "14:31", end: "15:00", name: "抵达 ITO / 取行李 + 取车" },
             { time: "15:30", name: "直奔 Mauna Kea（约1h车程）" },
             { time: "16:30", name: "抵达 Mauna Kea Visitor Station（2,800m）", lat: 19.7584, lng: -155.4553, icon: "sight" },
             { time: "17:00", end: "20:00", name: "Visitor Station 观星（不上山顶，轻松看星空）", lat: 19.7584, lng: -155.4553, icon: "activity",
@@ -1074,7 +1074,7 @@
               ]
             },
             { time: "20:30", name: "下山回 Hilo（约1h）" },
-            { time: "21:30", name: "入住 Hilo 市区酒店", lat: 19.7241, lng: -155.0868 },
+            { time: "21:30", name: "入住 Hilo Reeds Bay Hotel（175 Banyan Dr）", lat: 19.7241, lng: -155.0868 },
             { time: "22:00", name: "休息" }
           ]
         },
@@ -1084,7 +1084,7 @@
           region: "hilo", color: "#A23B34",
           weather: { icon: "🌦", high: 27, low: 20, desc: "局部阵雨" },
           coverImg: "images/d7-volcano.jpg",
-          flight: { code: "AS1111", from: "ITO", to: "HNL", time: "19:44→20:39" },
+          flight: { code: "AS1091", from: "ITO", to: "HNL", time: "17:59→18:54" },
           hotel: "Waikiki市中心酒店",
           carRental: "大岛 Hilo 租车（前日已取）",
           activities: [
@@ -1098,18 +1098,20 @@
               ]
             },
             { time: "12:30", end: "13:30", name: "午餐/补给", icon: "food" },
-            { time: "13:30", end: "15:30", name: "Chain of Craters Road（开车观景）", lat: 19.3097, lng: -155.1000, icon: "sight",
+            { time: "13:30", end: "14:30", name: "Chain of Craters Road（开车观景·缩短版）", lat: 19.3097, lng: -155.1000, icon: "sight",
               subs: [
-                { name: "19 英里海岸线下坡公路，选 2-3 个点停车拍照", duration: "2h" },
-                { name: "出发前加满油，园内没有加油站", duration: "⚠️" }
+                { name: "19 英里海岸线下坡公路，选 1-2 个点停车拍照", duration: "1h" },
+                { name: "出发前加满油，园内没有加油站", duration: "⚠️" },
+                { name: "回程航班提前，不要开到底，中途折返", duration: "⚠️" }
               ]
             },
-            { time: "15:30", name: "回撤" },
-            { time: "16:30", end: "17:00", name: "回到 Hilo" },
-            { time: "17:00", end: "18:15", name: "加油/还车/机场办理", lat: 19.7204, lng: -155.0483, icon: "airport" },
-            { time: "19:44", name: "飞回 HNL", icon: "airport" },
-            { time: "21:30", name: "回到 Waikiki", lat: 21.2766, lng: -157.8278 },
-            { time: "22:30", name: "睡觉" }
+            { time: "14:30", name: "回撤" },
+            { time: "15:30", name: "回到 Hilo" },
+            { time: "15:30", end: "16:30", name: "加油/还车/机场办理", lat: 19.7204, lng: -155.0483, icon: "airport" },
+            { time: "17:59", name: "起飞 AS1091", icon: "airport" },
+            { time: "18:54", name: "抵达 HNL" },
+            { time: "19:30", name: "回到 Waikiki", lat: 21.2766, lng: -157.8278 },
+            { time: "20:30", name: "晚餐 + 休息" }
           ]
         },
         {
