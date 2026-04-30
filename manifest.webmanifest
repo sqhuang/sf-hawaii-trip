@@ -1,0 +1,19 @@
+{
+  "name": "旧金山 + 夏威夷 9日行程",
+  "short_name": "SF × HNL 行程",
+  "description": "2026年5月 旧金山 + 夏威夷 离线可用的 9 日行程表",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

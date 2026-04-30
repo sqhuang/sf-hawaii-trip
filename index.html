@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>旧金山 + 夏威夷 9日行程</title>
+  <meta name="theme-color" content="#1a1a2e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SF × HNL 行程">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <script>
+    (function() {
+      const storedViewMode = (() => {
+        try {
+          const value = localStorage.getItem('travel-view-mode');
+          return value === 'mobile' || value === 'desktop' ? value : null;
+        } catch (err) {
+          return null;
+        }
+      })();
+      const storedMapCollapsed = (() => {
+        try {
+          return localStorage.getItem('travel-mobile-map-collapsed') === '1';
+        } catch (err) {
+          return false;
+        }
+      })();
+      const resolvedTheme = (() => {
+        try {
+          const saved = localStorage.getItem('theme');
+          if (saved === 'dark' || saved === 'light') return saved;
+          return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        } catch (err) {
+          return 'light';
+        }
+      })();
+      const initialViewMode = storedViewMode || (window.innerWidth <= 768 ? 'mobile' : 'desktop');
+      document.body.classList.add(initialViewMode + '-mode');
+      if (storedMapCollapsed) {
+        document.body.classList.add('map-collapsed');
+      }
+      if (resolvedTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script>
+
+  <div id="pw-gate">
+    <div class="pw-box">
+      <div class="pw-route">
+        <span class="pw-route-dot" style="background:#E8913A"></span><span class="pw-route-line"></span>
+        <span class="pw-route-code">SFO</span>
+        <span class="pw-route-line"></span><span class="pw-route-dot" style="background:#2E86AB"></span><span class="pw-route-line"></span>
+        <span class="pw-route-code">HNL</span>
+        <span class="pw-route-line"></span><span class="pw-route-dot" style="background:#A23B34"></span><span class="pw-route-line"></span>
+        <span class="pw-route-code">ITO</span>
+        <span class="pw-route-line"></span><span class="pw-route-dot" style="background:#2E86AB"></span>
+      </div>
+      <h2>San Francisco & Hawaii</h2>
+      <p>9 Days · May 2026</p>
+      <div class="pw-input-wrap">
+        <input type="password" id="pw-input" placeholder="Password" autocomplete="off">
+        <button onclick="checkPw()">ENTER</button>
+      </div>
+      <div class="pw-error" id="pw-error"></div>
+    </div>
+  </div>
+
+  <header id="trip-header">
+    <h1>旧金山 + 夏威夷 9日行程</h1>
+    <div class="date-range">2026年5月1日 – 5月10日</div>
+    <div class="countdown" id="countdown"></div>
+    <div class="badges">
+      <span class="badge">✈️ 6 趟航班</span>
+      <span class="badge">🏨 4 间酒店</span>
+      <span class="badge">🚗 2 次租车</span>
+    </div>
+    <div class="trip-progress" id="trip-progress"></div>
+  </header>
+
+  <main id="app">
+    <div id="map-panel">
+      <div id="mobile-map-header">
+        <span class="mobile-map-title">🗺️ 地图</span>
+        <button type="button" id="mobile-map-toggle" aria-expanded="true" aria-controls="map">收起</button>
+      </div>
+      <button class="overview-btn" onclick="showOverview()">🌏 全览</button>
+      <button class="offline-map-btn" id="offline-map-btn" type="button">🗺️ 离线</button>
+      <div id="map"></div>
+    </div>
+    <div id="itinerary-panel"></div>
+  </main>
+
+  <div id="view-mode-switch" aria-label="布局模式切换">
+    <button type="button" class="view-mode-btn active" data-view-mode="mobile">移动版</button>
+    <button type="button" class="view-mode-btn" data-view-mode="desktop">桌面版</button>
+  </div>
+
+  <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()">🌙</button>
+  <button class="emergency-toggle" id="emergency-toggle" type="button" aria-label="应急预案" title="应急预案">🆘</button>
+
+  <div id="offline-map-dialog" class="offline-dialog hidden" role="dialog" aria-modal="true" aria-labelledby="offline-dialog-title">
+    <div class="offline-dialog-box">
+      <h3 id="offline-dialog-title">🗺️ 离线地图</h3>
+      <p class="offline-dialog-desc">
+        下载旧金山、欧胡岛、大岛三块区域的地图瓦片，总大小约 20 MB。来源：OpenStreetMap。
+      </p>
+      <ul class="offline-dialog-regions">
+        <li data-region="sfo"><span class="offline-region-name">旧金山</span><span class="offline-region-status">—</span></li>
+        <li data-region="oahu"><span class="offline-region-name">欧胡岛</span><span class="offline-region-status">—</span></li>
+        <li data-region="hilo"><span class="offline-region-name">大岛</span><span class="offline-region-status">—</span></li>
+      </ul>
+      <div class="offline-dialog-progress">
+        <div class="offline-progress-bar"><div class="offline-progress-fill" style="width:0%"></div></div>
+        <div class="offline-progress-text" aria-live="polite">未开始</div>
+      </div>
+      <div class="offline-dialog-actions" id="offline-actions-row">
+        <button type="button" id="offline-download-btn">开始下载</button>
+        <button type="button" id="offline-clear-btn" hidden>清除缓存</button>
+        <button type="button" id="offline-cancel-btn" hidden>取消下载</button>
+        <button type="button" id="offline-close-btn">关闭</button>
+      </div>
+      <div class="offline-dialog-confirm" id="offline-confirm-row" hidden>
+        <span class="offline-confirm-text">确认清除所有离线瓦片？</span>
+        <div class="offline-confirm-actions">
+          <button type="button" id="offline-confirm-clear-btn">确认清除</button>
+          <button type="button" id="offline-confirm-cancel-btn">算了</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="emergency-dialog" class="emergency-dialog hidden" role="dialog" aria-modal="true" aria-labelledby="emergency-dialog-title">
+    <div class="emergency-dialog-box">
+      <div class="emergency-dialog-header">
+        <h3 id="emergency-dialog-title">🆘 应急预案</h3>
+        <button type="button" id="emergency-close-btn" class="emergency-dialog-close" aria-label="关闭">×</button>
+      </div>
+      <div class="emergency-dialog-content">
+        <p class="emergency-intro">出问题时知道下一步按哪个键。所有故障都有别人的钱兜底(航司 / 卡保险 / 旅游险 / 酒店赔)。</p>
+
+        <details class="emergency-section">
+          <summary>✈️ 航班延误 / 取消</summary>
+          <div class="emergency-section-body">
+            <p><b>当下立刻做(按顺序):</b></p>
+            <ol>
+              <li><b>不要傻排柜台</b>,那是最慢的</li>
+              <li>双线并发:占着柜台队伍,同时在<b>航司 app / 客服电话</b>改签 — 90% 情况下 app 比柜台快 30 分钟</li>
+              <li>5+ 小时延误或过夜:<b>主动开口要 hotel + 餐饮 voucher</b>,不问不给</li>
+              <li>后段受影响:<b>一次性把后续所有受影响航段全改</b>,别等下一站再处理</li>
+            </ol>
+            <p><b>本次行程最该警惕的两段:</b></p>
+            <ul>
+              <li><b>5/06 AS1072 HNL→ITO 13:35</b> — 取消备选:同天 AS / Hawaiian Airlines 后续班次</li>
+              <li><b>5/09 KE054 → KE2011 ICN 中转只 2h</b> — 全 KE 代码,自动改下一班(可能多过 1 晚 ICN,KE 包酒店)</li>
+            </ul>
+            <p><b>钱的回路:</b></p>
+            <ul>
+              <li>美国国内段(UA1175 / AS1072 / AS1091)取消或大延误:DOT 2024 新规<b>必须现金退款</b>,不是 voucher,坚持要现金</li>
+              <li>长延误 &gt;6h:订机票那张卡的 trip delay insurance 多半含,保留登机牌 + 延误证明</li>
+            </ul>
+          </div>
+        </details>
+
+        <details class="emergency-section">
+          <summary>🧳 行李丢失</summary>
+          <div class="emergency-section-body">
+            <p><b>先安心:</b>真"丢"概率 &lt; 0.5%,95% 是延误 24–72h,几乎都能找回。</p>
+            <p><b>真没出来:</b></p>
+            <ol>
+              <li><b>不要离开行李提取大厅</b> — 出了海关回不来</li>
+              <li>找航司的 <b>Baggage Service Office</b>(就在提取大厅出口附近)</li>
+              <li>填 <b>PIR (Property Irregularity Report)</b> → 拿 reference number <b>拍照存档</b>(唯一追踪凭证)</li>
+              <li>留酒店地址 — 找到后航司送上门,不用回机场</li>
+              <li>主动问 <b>essentials allowance</b>:UA / KE 都有,延误 &gt;24h 给 $50–150/人买必需品,留收据</li>
+            </ol>
+            <p><b>信用卡 baggage insurance:</b>延误 &gt;6h 一般 $100/天,丢失最高 $2000–3000。</p>
+            <p><b>风险排名:</b>5/01 HKG→SFO 国际段 &gt; 5/09 HNL→ICN→HKG &gt; 国内短程</p>
+          </div>
+        </details>
+
+        <details class="emergency-section">
+          <summary>🏨 酒店问题</summary>
+          <div class="emergency-section-body">
+            <p><b>4 个常见状况 + 怎么处理:</b></p>
+            <ul>
+              <li><b>没找到 reservation:</b>拿出离线 PDF 给前台 + 拨预订平台。极端情况要求 walk you to comparable hotel,差价 + 出租车由酒店出</li>
+              <li><b>房型给错</b>(SF 那间无障碍特大床+浴缸是合同):坚持原房型,引用预订单条款</li>
+              <li><b>早到房间没好:</b>行李寄存 + 留电话/短信通知,出去玩,行业惯例</li>
+              <li><b>入住后发现问题(空调/热水/虫/霉):</b>马上下楼或电话,<b>不要等 24h</b> → 要求换房;没空房 → partial refund / 免费升级</li>
+            </ul>
+            <p><b>Escalate 路径:</b>前台 → Manager on Duty → 预订平台客服 → Booking / TripAdvisor 写 review。经验上写到一半经理就来谈了。</p>
+            <p><b>夏威夷特有的两个坑:</b></p>
+            <ul>
+              <li><b>Resort fee $30–65/晚</b>,check-in 才交,合规收费(Hilton Hawaiian Village 约 $55–65)</li>
+              <li><b>Incidentals hold $100–200/晚</b> — 信用卡预授权,2–7 天后释放。<b>绝对不要用 debit 卡</b>,会真冻结余额</li>
+            </ul>
+          </div>
+        </details>
+
+        <details class="emergency-section">
+          <summary>🆘 通用急救包</summary>
+          <div class="emergency-section-body">
+            <p><b>离线 PDF + 拍照</b>(手机相册 + Gmail 草稿双备份):</p>
+            <ul>
+              <li>6 张机票确认</li>
+              <li>5 个酒店预订</li>
+              <li>2 张租车合同</li>
+              <li>旅游保险保单 + 24h 救援电话</li>
+              <li>护照原件页 + 美签</li>
+              <li>信用卡背面客服电话(国际拨号写下来,卡丢了要打)</li>
+            </ul>
+            <p><b>关键号码:</b></p>
+            <ul>
+              <li>订机票卡的 24h emergency line(看卡背)</li>
+              <li>中国驻 SF 总领事馆:<a href="tel:+14158525900">+1-415-852-5900</a></li>
+              <li>中国驻 LA 总领事馆(管夏威夷):<a href="tel:+12138078088">+1-213-807-8088</a></li>
+              <li>美国紧急电话:<a href="tel:911">911</a></li>
+            </ul>
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===== PASSWORD GATE =====
+    const PW_HASH = 'bee53cbc48e3ce255f28dbf971dcb4983bbe1982649dd2f7135f5bb8c10bbd2a'; // sha256
+    async function sha256(str) {
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+    async function checkPw() {
+      const input = document.getElementById('pw-input').value;
+      const hash = await sha256(input);
+      if (hash === PW_HASH) {
+        sessionStorage.setItem('pw-ok', '1');
+        document.getElementById('pw-gate').classList.add('hidden');
+      } else {
+        document.getElementById('pw-error').textContent = '密码错误，请重试';
+        document.getElementById('pw-input').value = '';
+        document.getElementById('pw-input').focus();
+      }
+    }
+    // Auto-unlock if already authenticated this session
+    if (sessionStorage.getItem('pw-ok') === '1') {
+      document.getElementById('pw-gate').classList.add('hidden');
+    }
+    // Enter key support
+    document.getElementById('pw-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') checkPw();
+    });
+  </script>
+
+  <script>
+    const VIEW_MODE_KEY = 'travel-view-mode';
+    const MOBILE_MAP_COLLAPSED_KEY = 'travel-mobile-map-collapsed';
+    const MOBILE_BREAKPOINT = 768;
+
+    function getAutoViewMode() {
+      return window.innerWidth <= MOBILE_BREAKPOINT ? 'mobile' : 'desktop';
+    }
+
+    function getStoredViewMode() {
+      try {
+        const value = localStorage.getItem(VIEW_MODE_KEY);
+        return value === 'mobile' || value === 'desktop' ? value : null;
+      } catch (err) {
+        return null;
+      }
+    }
+
+    function getStoredMapCollapsed() {
+      try {
+        return localStorage.getItem(MOBILE_MAP_COLLAPSED_KEY) === '1';
+      } catch (err) {
+        return false;
+      }
+    }
+
+    function setStoredViewMode(mode) {
+      try {
+        localStorage.setItem(VIEW_MODE_KEY, mode);
+      } catch (err) {}
+    }
+
+    function setStoredMapCollapsed(collapsed) {
+      try {
+        localStorage.setItem(MOBILE_MAP_COLLAPSED_KEY, collapsed ? '1' : '0');
+      } catch (err) {}
+    }
+  </script>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
